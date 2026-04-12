@@ -1,0 +1,78 @@
+@startuml
+skinparam classAttributeIconSize 0
+skinparam monochrome false
+skinparam shadowing false
+
+title Иерархия исключений в Java
+
+class Object {
+}
+
+class Throwable {
+    - String message
+    - Throwable cause
+    + getMessage(): String
+    + printStackTrace(): void
+}
+
+class Error {
+    {field} Непроверяемые (unchecked)
+    {field} Серьёзные системные ошибки
+}
+
+class Exception {
+    {field} Проверяемые (checked)
+    {field} Требуют try/catch или throws
+}
+
+class RuntimeException {
+    {field} Непроверяемые (unchecked)
+    {field} Ошибки логики программы
+}
+
+' === Error подклассы ===
+class OutOfMemoryError
+class StackOverflowError
+
+' === Checked Exception подклассы ===
+class IOException
+class FileNotFoundException
+
+' === RuntimeException подклассы ===
+class NullPointerException
+class IllegalArgumentException
+class IndexOutOfBoundsException
+
+' === Наши кастомные исключения ===
+class ErrorAskYourselfException #LightGreen
+class InvalidConfigException #LightGreen
+class NullCharacterException #LightGreen
+
+' === Связи наследования ===
+Object <|-- Throwable
+
+Throwable <|-- Error
+Throwable <|-- Exception
+
+Exception <|-- RuntimeException
+
+' Error hierarchy
+Error <|-- OutOfMemoryError
+Error <|-- StackOverflowError
+
+' Checked exceptions
+Exception <|-- IOException
+IOException <|-- FileNotFoundException
+
+' RuntimeException hierarchy
+RuntimeException <|-- NullPointerException
+RuntimeException <|-- IllegalArgumentException
+RuntimeException <|-- IndexOutOfBoundsException
+
+' Наши кастомные
+RuntimeException <|-- ErrorAskYourselfException
+RuntimeException <|-- InvalidConfigException
+RuntimeException <|-- NullCharacterException
+
+
+@enduml

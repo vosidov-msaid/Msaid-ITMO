@@ -1,0 +1,71 @@
+@startuml
+skinparam packageStyle rectangle
+skinparam classAttributeIconSize 0
+
+' Main Move hierarchy
+package "ru.ifmo.se.pokemon" #DDFFDD {
+	class Move
+	class DamageMove
+	class PhysicalMove
+	class SpecialMove
+	class StatusMove
+	class Pokemon
+}
+
+DamageMove --|> Move
+PhysicalMove --|> DamageMove
+SpecialMove --|> DamageMove
+StatusMove --|> Move
+
+package "Moves.PhysicalMoves" #E3E6FF {
+	class BrutalSwing
+	class StoneEdge
+	class TakeDown
+	class VineWhip
+	BrutalSwing --|> PhysicalMove
+	StoneEdge --|> PhysicalMove
+	TakeDown --|> PhysicalMove
+	VineWhip --|> PhysicalMove
+}
+
+package "Moves.SpecialMoves" #FFF2CC {
+	class Acid
+	class Psychic
+	Acid --|> SpecialMove
+	Psychic --|> SpecialMove
+}
+
+package "Moves.StatusMoves" #FDE9D9 {
+	class Agility
+	class Confide
+	class DoubleTeam
+	class Leer
+	class Rest
+	class Swagger
+	Agility --|> StatusMove
+	Confide --|> StatusMove
+	DoubleTeam --|> StatusMove
+	Leer --|> StatusMove
+	Rest --|> StatusMove
+	Swagger --|> StatusMove
+}
+
+package "Pokemons" #D9EAD3 {
+	class Bellsprout
+	class Bunnelby
+	class Diancie
+	class Diggersby
+	class Victreebel
+	class Weepinbell
+	Bellsprout --|> Pokemon
+	Bunnelby --|> Pokemon
+	Diancie --|> Pokemon
+	Diggersby --|> Bunnelby
+	Victreebel --|> Weepinbell
+	Weepinbell --|> Bellsprout
+}
+
+note top of Move : Abstract base for all moves
+note right of Pokemon : Base class for all custom Pokemons
+
+@enduml

@@ -1,0 +1,55 @@
+# Compiled class file
+*.class
+
+# Log file
+*.log
+
+# BlueJ files
+*.ctxt
+.idea/
+out/
+
+# Mobile Tools for Java (J2ME)
+.mtj.tmp/
+
+# Package Files
+*.jar
+*.war
+*.nar
+*.ear
+*.zip
+*.tar.gz
+*.rar
+
+# virtual machine crash logs, see http://www.java.com
+hs_err_pid*
+
+# Maven
+target/
+pom.xml.tag
+pom.xml.next
+pom.xml.bak
+pom.xml.versions
+pom.xml.releaseBackup
+pom.xml.versionsBackup
+pom.xml.perforce
+lastupdate
+maven-status
+maven-archiver
+cobertura.ser
+.clover/
+.gwt_checksums
+.install4j/
+.p2/
+.apt_generated
+.repository/
+.shortpom.xml
+.springBeans/
+.project
+.classpath
+.settings
+.idea/
+*.iws
+*.iml
+*.ipr
+*.swp

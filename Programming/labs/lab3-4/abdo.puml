@@ -1,0 +1,76 @@
+@startuml
+
+' ====== Abstract base class ======
+abstract class Character {
+  - name : String
+  - location : Location
+  - alive : boolean
+
+  + speak() : void
+  + move(newLocation : Location) : void
+  + toString() : String
+  + equals(obj : Object) : boolean
+  + hashCode() : int
+}
+
+' ====== Subclasses ======
+class Queen {
+  - courage : int
+  - tempted : boolean
+
+  + descendIntoPit() : void
+  + resistTemptation() : void
+}
+
+class King {
+  - trueForm : boolean
+
+  + revealForm() : void
+}
+
+Character <|-- Queen
+Character <|-- King
+
+' ====== Witch ======
+class Witch {
+  + handOverElixir(q : Queen) : void
+}
+
+' Relationships
+Witch ..> Queen : handOverElixir()
+Witch ..> ElixirBottle : gives
+Queen --> ElixirBottle : uses
+King -- Queen : relation
+Character --> Location : location
+Queen --> Emotion : experiences
+
+' ====== Artifact interface ======
+interface Artifact {
+  + use() : void
+  + isOpen() : boolean
+}
+
+class ElixirBottle {
+  - isOpen : boolean
+  - containsElixir : boolean
+
+  + open() : void
+  + drink() : void
+  + use() : void
+}
+
+Artifact <|.. ElixirBottle
+
+' ====== Enum ======
+enum Location {
+  SURFACE
+  PIT
+}
+
+' ====== Record ======
+class Emotion <<record>> {
+  - description : String
+  - positive : boolean
+}
+
+@enduml

@@ -1,0 +1,81 @@
+@startuml
+enum SleepStatus {
+    SLEEPING
+    AWAKE
+}
+
+enum TimeOfDay {
+    NIGHT
+    MORNING
+    DAY
+}
+
+interface Respondent {
+    +respond() String
+    +sawSomething() boolean
+}
+
+class Question <<record>> {
+    +Shorty asker
+    +Shorty asked
+    +String answer
+}
+
+class ErrorAskYourselfException <<exception>> {
+    +ErrorAskYourselfException(String message)
+    +getMessage() String
+}
+
+class NoOneAwakeException <<exception>> {
+    +NoOneAwake(String message)
+    +getMessage() String
+}
+
+class Shorty {
+    -boolean sawSuspicious
+    +Shorty(String name)
+    +walkAroundCity() void
+    +askOther(Shorty other) String
+    +respond() String
+    +sawSomething() boolean
+}
+
+abstract class Character {
+    #String name
+    #SleepState state
+    +Character(String name)
+    +getName() String
+    +getState() SleepStatus
+    +wakeUp() void
+    +toString() String
+    +equals(Object) boolean
+    +hashCode() int
+}
+
+class City {
+    -String name
+    -TimeOfDay timeOfDay
+    -ArrayList<Shorty> residents
+    -int questionCount
+    +City(String name)
+    +addShorty(Shorty) void
+    +changeTimeTo(TimeOfDay) void
+    +wakeShorties() void
+    +startDialog() void
+    +summarize() void
+    +getCharacters() ArrayList<Shorty>
+    +toString() String
+}
+
+Shorty --|> Character : extends
+Shorty ..> ErrorAskYourselfException : throws
+Character--> SleepStatus : uses
+Character ..|> Respondent : implements
+Question --> Shorty : references
+City o-- Shorty : contains
+City --> TimeOfDay : uses
+City ..> NoOneAwakeException : throws
+
+Exception <|-- NoOneAwakeException : extends
+RuntimeException <|-- ErrorAskYourselfException : extends
+@enduml
