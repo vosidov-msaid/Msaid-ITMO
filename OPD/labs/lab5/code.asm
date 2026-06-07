@@ -1,0 +1,43 @@
+ORG		0x464;
+
+BEGIN: 	WORD 0x55E;
+CUR: 	WORD ?;
+FIRST: 	WORD ?;
+SECOND: WORD ?;
+MASK: 	WORD 0xFF;
+CR:		WORD 0x0D;
+
+START: 	CLA;
+		LD BEGIN;
+		ST CUR;
+
+S0: 	LD (CUR)+;
+		ST SECOND;
+		SWAB;
+		ST FIRST;
+
+W1: 	IN 7;
+		AND #0x40;
+		BEQ W1;
+		LD FIRST;
+		AND MASK;
+		OUT 6;
+		SUB CR;
+		BEQ STOP;
+
+W2: 	IN 7;
+		AND #0x40 ;
+		BEQ W2;
+		LD SECOND;
+		AND MASK;
+		OUT 6;
+		SUB CR;
+		BEQ STOP;
+		JUMP S0;
+
+STOP: 	HLT
+
+ORG 	0x55E
+WORD 	0xF2F5
+WORD 	0xFEEB
+WORD 	0xE10D
