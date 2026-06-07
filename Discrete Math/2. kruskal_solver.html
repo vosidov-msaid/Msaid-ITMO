@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Алгоритм Краскала — МСД</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f5f0e8; --surface: #fff; --surface2: #f0ebe0;
+    --border: #d0c8b8; --ink: #1a1612;
+    --red: #c0392b; --blue: #2255cc; --green: #1a9e5c;
+    --muted: #8a8070; --orange: #e08c22;
+  }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { background:var(--bg); color:var(--ink); font-family:'Space Mono',monospace; min-height:100vh; padding:24px; }
+  h1 { font-family:'Syne',sans-serif; font-size:1.5rem; font-weight:800; color:var(--red); margin-bottom:2px; }
+  .subtitle { color:var(--muted); font-size:0.72rem; margin-bottom:20px; }
+
+  .main { display:grid; grid-template-columns:auto 1fr; gap:20px; max-width:1100px; }
+  @media(max-width:800px){ .main{ grid-template-columns:1fr; } }
+
+  .card { background:var(--surface); border:2px solid var(--ink); border-radius:4px; padding:18px; box-shadow:4px 4px 0 var(--ink); }
+  .card-title { font-family:'Syne',sans-serif; font-size:0.72rem; font-weight:800; color:var(--muted); text-transform:uppercase; letter-spacing:0.1em; margin-bottom:14px; }
+
+  /* GRID INPUT */
+  .grid-section { display:flex; flex-direction:column; gap:14px; }
+  .grid-controls { display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+  label { font-size:0.73rem; color:var(--muted); display:flex; align-items:center; gap:6px; }
+  select { background:var(--surface2); border:1px solid var(--border); color:var(--ink); padding:5px 8px; font-family:'Space Mono',monospace; font-size:0.78rem; border-radius:3px; }
+  button { background:var(--ink); color:var(--bg); border:2px solid var(--ink); border-radius:4px; padding:7px 16px; font-family:'Syne',sans-serif; font-size:0.7rem; font-weight:800; cursor:pointer; transition:all 0.12s; box-shadow:2px 2px 0 var(--muted); }
+  button:hover { transform:translate(-1px,-1px); box-shadow:3px 3px 0 var(--muted); }
+  button.sec { background:var(--surface); color:var(--ink); }
+  button.go { background:var(--green); border-color:var(--green); color:#fff; }
+
+  /* The grid */
+  .grid-wrap { display:inline-block; position:relative; }
+  .grid-table { border-collapse:collapse; }
+  .grid-table td { width:52px; height:52px; border:1px solid var(--border); position:relative; text-align:center; vertical-align:middle; background:var(--surface); }
+  .grid-table td.has-node { background:var(--surface2); }
+  .cell-input {
+    width:40px; height:40px; border:2px solid var(--border); border-radius:50%;
+    background:var(--surface); font-family:'Syne',sans-serif;
+    font-size:0.9rem; font-weight:800; text-align:center;
+    color:var(--ink); outline:none; display:block; margin:auto;
+    transition:border-color 0.15s, background 0.15s;
+  }
+  .cell-input:focus { border-color:var(--blue); background:rgba(34,85,204,0.06); }
+  .cell-input.filled { border-color:var(--ink); background:var(--surface2); }
+  .cell-input.mst-node { border-color:var(--green); background:#eafaf2; }
+
+  .hint-box { font-size:0.68rem; color:var(--muted); background:var(--surface2); border:1px solid var(--border); padding:8px 12px; border-radius:4px; line-height:1.6; }
+  .hint-box strong { color:var(--ink); }
+
+  /* Steps */
+  .steps { display:flex; flex-direction:column; gap:8px; max-height:500px; overflow-y:auto; }
+  .step { border-left:3px solid var(--border); padding:10px 12px; font-size:0.76rem; line-height:1.7; background:var(--surface2); border-radius:0 4px 4px 0; animation:slideIn 0.2s ease; }
+  .step.ok { border-left-color:var(--green); background:#eaf9f0; }
+  .step.skip { border-left-color:var(--red); background:#fdf0ee; }
+  .step-head { font-weight:700; font-size:0.68rem; margin-bottom:4px; font-family:'Syne',sans-serif; }
+  .badge { display:inline-block; padding:1px 8px; border-radius:2px; font-size:0.65rem; font-weight:700; vertical-align:middle; margin-left:6px; }
+  .badge.ok { background:var(--green); color:#fff; }
+  .badge.no { background:var(--red); color:#fff; }
+  .sorted-chips { display:flex; flex-wrap:wrap; gap:5px; margin:8px 0; }
+  .chip { background:var(--surface); border:1px solid var(--border); border-radius:3px; padding:3px 8px; font-size:0.7rem; }
+  .chip.used { border-color:var(--green); background:#eaf9f0; font-weight:700; }
+  .result-box { margin-top:14px; background:var(--ink); color:var(--bg); border-radius:4px; padding:16px; }
+  .result-box h3 { font-family:'Syne',sans-serif; font-size:0.8rem; font-weight:800; margin-bottom:8px; }
+  .empty-msg { color:var(--muted); font-size:0.78rem; font-style:italic; padding:24px; text-align:center; }
+  @keyframes slideIn { from{opacity:0;transform:translateX(-6px)} to{opacity:1;transform:none} }
+
+  /* Canvas for visualization */
+  canvas { border:2px solid var(--ink); border-radius:4px; background:var(--surface); display:block; width:100%; max-width:400px; margin-top:10px; }
+
+  /* Weight display between cells */
+  .weight-info { font-size:0.68rem; color:var(--muted); margin-top:8px; }
+</style>
+</head>
+<body>
+<h1>Алгоритм Краскала</h1>
+<p class="subtitle">Построение минимального связывающего дерева (МСД)</p>
+
+<div class="main">
+  <div class="grid-section">
+    <div class="card">
+      <div class="card-title">Расположение вершин на сетке</div>
+      <div class="grid-controls" style="margin-bottom:12px;">
+        <label>Размер сетки:
+          <select id="gridSize" onchange="rebuildGrid()">
+            <option value="3">3×3</option>
+            <option value="4" selected>4×4</option>
+            <option value="5">5×5</option>
+          </select>
+        </label>
+        <label>Вершин:
+          <select id="nodeCount">
+            <option value="5">5</option><option value="6">6</option>
+            <option value="7">7</option><option value="8">8</option>
+            <option value="9" selected>9</option>
+          </select>
+        </label>
+        <button class="sec" onclick="clearGrid()">Очистить</button>
+        <button onclick="loadExample()">Пример</button>
+      </div>
+
+      <div class="hint-box" style="margin-bottom:12px;">
+        <strong>Как вводить:</strong> впиши номер вершины в нужную ячейку сетки.<br>
+        Пустая ячейка = нет вершины. Расстояния считаются как манхэттенское расстояние между клетками.
+      </div>
+
+      <div id="gridWrap"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Веса рёбер (расстояния)</div>
+      <div id="weightInfo" class="weight-info">Расставь вершины — рёбра появятся здесь</div>
+      <button class="go" onclick="solve()" style="margin-top:12px;width:100%;">▶ Построить МСД алгоритмом Краскала</button>
+    </div>
+  </div>
+
+  <div>
+    <div class="card">
+      <div class="card-title">Пошаговое решение</div>
+      <div id="stepsOut"><div class="empty-msg">Расставь вершины на сетке и нажми ▶</div></div>
+      <div id="resultOut"></div>
+    </div>
+    <canvas id="graphCanvas" width="400" height="320"></canvas>
+  </div>
+</div>
+
+<script>
+let GSIZE = 4;
+let grid = []; // grid[row][col] = node number (1-based) or 0
+
+function rebuildGrid(){
+  GSIZE = parseInt(document.getElementById('gridSize').value);
+  grid = Array.from({length:GSIZE},()=>Array(GSIZE).fill(0));
+  renderGrid();
+  document.getElementById('weightInfo').textContent = 'Расставь вершины — рёбра появятся здесь';
+}
+
+function clearGrid(){
+  grid = Array.from({length:GSIZE},()=>Array(GSIZE).fill(0));
+  renderGrid();
+  document.getElementById('weightInfo').textContent = 'Расставь вершины — рёбра появятся здесь';
+  document.getElementById('stepsOut').innerHTML = '<div class="empty-msg">Расставь вершины на сетке и нажми ▶</div>';
+  document.getElementById('resultOut').innerHTML = '';
+  clearCanvas();
+}
+
+function renderGrid(){
+  const wrap = document.getElementById('gridWrap');
+  let html = '<table class="grid-table">';
+  for(let r=0;r<GSIZE;r++){
+    html += '<tr>';
+    for(let c=0;c<GSIZE;c++){
+      const v = grid[r][c];
+      html += `<td class="${v?'has-node':''}">
+        <input type="text" class="cell-input ${v?'filled':''}" maxlength="2"
+          id="gc_${r}_${c}" value="${v||''}"
+          oninput="onGridInput(${r},${c})"
+          placeholder="">
+      </td>`;
+    }
+    html += '</tr>';
+  }
+  html += '</table>';
+  wrap.innerHTML = html;
+}
+
+function onGridInput(r,c){
+  const el = document.getElementById(`gc_${r}_${c}`);
+  const raw = el.value.trim();
+  const v = parseInt(raw)||0;
+  if(v>=1){ grid[r][c]=v; el.classList.add('filled'); }
+  else { grid[r][c]=0; el.value=''; el.classList.remove('filled'); }
+  updateWeightInfo();
+}
+
+function getNodes(){
+  // Returns array of {num, row, col}
+  const nodes = [];
+  for(let r=0;r<GSIZE;r++) for(let c=0;c<GSIZE;c++){
+    if(grid[r][c]>0) nodes.push({num:grid[r][c],row:r,col:c});
+  }
+  return nodes.sort((a,b)=>a.num-b.num);
+}
+
+function dist(a,b){ return Math.abs(a.row-b.row)+Math.abs(a.col-b.col); }
+
+function getEdges(nodes){
+  const edges=[];
+  for(let i=0;i<nodes.length;i++) for(let j=i+1;j<nodes.length;j++){
+    edges.push({i:nodes[i].num,j:nodes[j].num,w:dist(nodes[i],nodes[j]),a:nodes[i],b:nodes[j]});
+  }
+  return edges;
+}
+
+function updateWeightInfo(){
+  const nodes = getNodes();
+  if(nodes.length<2){ document.getElementById('weightInfo').textContent='Нужно минимум 2 вершины'; return; }
+  const edges = getEdges(nodes);
+  const sorted = [...edges].sort((a,b)=>a.w-b.w||a.i-b.i);
+  let html = `<div style="font-size:0.7rem;color:var(--muted);margin-bottom:6px;">Все рёбра (манхэттенское расстояние), отсортированные:</div>`;
+  html += '<div class="sorted-chips">';
+  sorted.forEach(e=>{ html+=`<span class="chip">(x${e.i}-x${e.j})=${e.w}</span>`; });
+  html += '</div>';
+  document.getElementById('weightInfo').innerHTML = html;
+}
+
+function loadExample(){
+  // Example from photo 2, variant 1: 9 nodes on 4x4 grid
+  // positions roughly as in the image: 1,4,9,5,2,7,8,6,3
+  GSIZE = 4;
+  document.getElementById('gridSize').value='4';
+  grid = Array.from({length:4},()=>Array(4).fill(0));
+  // Place nodes: row,col -> node num
+  const placements = [[0,1,1],[0,2,4],[1,0,9],[1,1,5],[1,2,2],[2,0,7],[2,1,8],[2,2,6],[3,1,3]];
+  placements.forEach(([r,c,n])=>{ grid[r][c]=n; });
+  renderGrid();
+  updateWeightInfo();
+}
+
+// Union-Find
+function makeUF(nums){ const uf={}; nums.forEach(n=>uf[n]=n); return uf; }
+function find(uf,x){ return uf[x]===x?x:(uf[x]=find(uf,uf[x])); }
+function union(uf,a,b){ uf[find(uf,a)]=find(uf,b); }
+
+function solve(){
+  const nodes = getNodes();
+  if(nodes.length<2){ alert('Нужно минимум 2 вершины!'); return; }
+  const edges = getEdges(nodes);
+  const sorted = [...edges].sort((a,b)=>a.w-b.w||a.i-b.i);
+  const N = nodes.length;
+
+  const steps=[];
+  steps.push(`<div class="step">
+    <div class="step-head">Шаг 1 — Сортируем все рёбра по возрастанию весов</div>
+    <div class="sorted-chips">
+      ${sorted.map(e=>`<span class="chip">(x${e.i}-x${e.j}) = ${e.w}</span>`).join('')}
+    </div>
+    <div style="margin-top:6px;font-size:0.7rem;color:var(--muted)">Всего рёбер: ${sorted.length}. Нужно включить в МСД: ${N-1} ребро.</div>
+  </div>`);
+
+  const uf = makeUF(nodes.map(n=>n.num));
+  const mst=[];
+  let totalW=0;
+  let done=false;
+
+  for(const e of sorted){
+    if(done) break;
+    const cycle = find(uf,e.i)===find(uf,e.j);
+    if(!cycle){ union(uf,e.i,e.j); mst.push(e); totalW+=e.w; }
+    const treeComplete = mst.length===N-1;
+    steps.push(`<div class="step ${cycle?'skip':'ok'}">
+      <div class="step-head">Рассматриваем ребро (x${e.i} — x${e.j}), вес = ${e.w}
+        <span class="badge ${cycle?'no':'ok'}">${cycle?'ЦИКЛ':'ВКЛЮЧИТЬ'}</span>
+      </div>
+      <div>${cycle
+        ? `x${e.i} и x${e.j} уже связаны через построенное дерево → пропускаем`
+        : `x${e.i} и x${e.j} в разных компонентах → добавляем в МСД`
+      }</div>
+      <div style="margin-top:4px;font-size:0.7rem;color:var(--muted)">МСД: {${mst.map(e=>`(x${e.i}-x${e.j})`).join(', ')||'—'}}</div>
+      ${treeComplete?`<div style="color:var(--green);font-weight:700;margin-top:6px">
+        ✓ Включено ${mst.length} рёбер (= m−1 = ${N}−1). Минимальное дерево построено!<br>
+        Все ${N} вершин соединены. Суммарный вес = <strong>${totalW}</strong>.
+      </div>`:''}
+    </div>`);
+    if(treeComplete) done=true;
+  }
+
+  document.getElementById('stepsOut').innerHTML=steps.join('');
+  document.getElementById('resultOut').innerHTML=`
+    <div class="result-box">
+      <h3>🌲 Минимальное связывающее дерево</h3>
+      ${mst.map(e=>`<div>(x${e.i} — x${e.j}) = ${e.w}</div>`).join('')}
+      <div style="margin-top:10px;font-family:'Syne',sans-serif;font-size:0.85rem;font-weight:800;">Суммарный вес = ${totalW}</div>
+    </div>`;
+
+  drawGraph(nodes, edges, mst);
+  // Highlight mst nodes on grid
+  nodes.forEach(n=>{
+    const el = document.getElementById(`gc_${n.row}_${n.col}`);
+    if(el) el.classList.remove('mst-node');
+  });
+  mst.forEach(e=>{
+    [e.a,e.b].forEach(nd=>{
+      const el = document.getElementById(`gc_${nd.row}_${nd.col}`);
+      if(el) el.classList.add('mst-node');
+    });
+  });
+}
+
+function clearCanvas(){
+  const c=document.getElementById('graphCanvas');
+  c.getContext('2d').clearRect(0,0,c.width,c.height);
+}
+
+function drawGraph(nodes, allEdges, mstEdges){
+  const canvas=document.getElementById('graphCanvas');
+  const ctx=canvas.getContext('2d');
+  const W=canvas.width, H=canvas.height;
+  ctx.clearRect(0,0,W,H);
+
+  // Map grid coords to canvas
+  const pad=40;
+  const cw=(W-2*pad)/Math.max(GSIZE-1,1), ch=(H-2*pad)/Math.max(GSIZE-1,1);
+  const pos={};
+  nodes.forEach(n=>{ pos[n.num]={x:pad+n.col*cw, y:pad+n.row*ch}; });
+
+  // Draw all edges
+  allEdges.forEach(e=>{
+    const a=pos[e.i],b=pos[e.j];
+    ctx.beginPath(); ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y);
+    ctx.strokeStyle='#d0c8b8'; ctx.lineWidth=1.5; ctx.stroke();
+    const mx=(a.x+b.x)/2, my=(a.y+b.y)/2;
+    ctx.fillStyle='#8a8070'; ctx.font='10px Space Mono';
+    ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText(e.w, mx+5, my-6);
+  });
+
+  // Draw MST edges
+  mstEdges.forEach(e=>{
+    const a=pos[e.i],b=pos[e.j];
+    ctx.beginPath(); ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y);
+    ctx.strokeStyle='#1a9e5c'; ctx.lineWidth=3; ctx.stroke();
+  });
+
+  // Draw nodes
+  nodes.forEach(n=>{
+    const p=pos[n.num];
+    const inMST=mstEdges.some(e=>e.i===n.num||e.j===n.num);
+    ctx.beginPath(); ctx.arc(p.x,p.y,16,0,Math.PI*2);
+    ctx.fillStyle=inMST?'#eafaf2':'#fff';
+    ctx.strokeStyle='#1a1612'; ctx.lineWidth=2;
+    ctx.fill(); ctx.stroke();
+    ctx.fillStyle='#1a1612'; ctx.font='bold 12px Syne,sans-serif';
+    ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText('x'+n.num, p.x, p.y);
+  });
+}
+
+rebuildGrid();
+</script>
+</body>
+</html>

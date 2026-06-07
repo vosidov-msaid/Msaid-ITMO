@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Алгоритм Вейсмана — Раскраска графа</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Unbounded:wght@400;700;900&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0d0d0f;--surface:#16161a;--surface2:#1e1e24;--border:#2a2a35;--accent:#7c6af7;--accent2:#f7a06a;--accent3:#6af7b8;--text:#e8e8f0;--muted:#6b6b80;--danger:#f76a6a;}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--text);font-family:'JetBrains Mono',monospace;min-height:100vh;padding:24px;}
+h1{font-family:'Unbounded',sans-serif;font-size:1.4rem;font-weight:900;color:var(--accent);letter-spacing:-0.02em;margin-bottom:4px;}
+.subtitle{color:var(--muted);font-size:0.75rem;margin-bottom:24px;}
+.layout{display:grid;grid-template-columns:360px 1fr;gap:20px;max-width:1150px;}
+@media(max-width:800px){.layout{grid-template-columns:1fr;}}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px;}
+.card-title{font-family:'Unbounded',sans-serif;font-size:0.7rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:14px;}
+.controls{display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;align-items:center;}
+label{font-size:0.75rem;color:var(--muted);}
+select{background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:6px 10px;border-radius:6px;font-family:'JetBrains Mono',monospace;font-size:0.8rem;}
+button{background:var(--accent);color:#fff;border:none;border-radius:8px;padding:8px 18px;font-family:'Unbounded',sans-serif;font-size:0.7rem;font-weight:700;cursor:pointer;transition:opacity 0.15s;}
+button:hover{opacity:0.85;}
+button.sec{background:transparent;border:1px solid var(--border);color:var(--muted);}
+button.sec:hover{border-color:var(--accent);color:var(--accent);}
+
+/* Matrix input */
+.matrix-input-area{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:12px;margin-bottom:10px;}
+.matrix-row{display:flex;gap:6px;margin-bottom:6px;align-items:center;}
+.row-label{font-size:0.75rem;color:var(--accent);min-width:24px;text-align:right;}
+.matrix-row input[type=text]{width:32px;height:32px;background:var(--surface2);border:1px solid var(--border);color:var(--text);text-align:center;font-family:'JetBrains Mono',monospace;font-size:0.9rem;font-weight:700;border-radius:5px;outline:none;transition:border-color 0.15s;}
+.matrix-row input.diag{background:var(--surface);color:var(--muted);cursor:default;}
+.matrix-row input.has-edge{border-color:var(--accent);color:var(--accent3);}
+.matrix-row input[type=text]:focus{border-color:var(--accent);}
+.col-labels{display:flex;gap:6px;margin-bottom:4px;padding-left:30px;}
+.col-label{width:32px;text-align:center;font-size:0.72rem;color:var(--accent);}
+
+/* Steps */
+.steps{display:flex;flex-direction:column;gap:10px;max-height:700px;overflow-y:auto;}
+.step{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:12px 14px;font-size:0.74rem;line-height:1.75;animation:fadeIn 0.3s ease;}
+.step-header{font-family:'Unbounded',sans-serif;font-size:0.65rem;font-weight:700;color:var(--accent2);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px;}
+.hi{color:var(--accent3);font-weight:700;}
+.del{color:var(--danger);text-decoration:line-through;}
+.chosen{color:var(--accent);font-weight:700;}
+.eq{color:var(--accent3);}
+.mut{color:var(--muted);}
+
+/* Expansion table */
+.exp-table{width:100%;border-collapse:collapse;margin:6px 0;font-size:0.72rem;}
+.exp-table th{background:var(--surface2);color:var(--muted);padding:5px 8px;text-align:left;border:1px solid var(--border);}
+.exp-table td{padding:4px 8px;border:1px solid var(--border);vertical-align:top;}
+.exp-table tr.surviving td{background:rgba(106,247,184,0.07);}
+.exp-table tr.absorbed td{opacity:0.5;}
+.law-tag{display:inline-block;background:var(--surface2);color:var(--muted);font-size:0.6rem;padding:1px 5px;border-radius:3px;margin-left:4px;}
+
+.result-box{margin-top:16px;background:var(--surface2);border:1px solid var(--accent);border-radius:10px;padding:16px;}
+.result-box h3{font-family:'Unbounded',sans-serif;font-size:0.75rem;font-weight:700;color:var(--accent);margin-bottom:10px;}
+.color-group{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;}
+.color-chip{padding:4px 12px;border-radius:20px;font-size:0.75rem;font-weight:700;color:#fff;}
+.empty-msg{color:var(--muted);font-size:0.8rem;font-style:italic;text-align:center;padding:24px;}
+@keyframes fadeIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+</style>
+</head>
+<body>
+<h1>Алгоритм Вейсмана</h1>
+<p class="subtitle">Раскраска графа · Метод Магу + Метод Петрика</p>
+
+<div class="controls">
+  <label>Вершин:</label>
+  <select id="nodeCount" onchange="rebuildMatrix()">
+    <option value="4">4</option><option value="5">5</option>
+    <option value="6" selected>6</option><option value="7">7</option><option value="8">8</option>
+  </select>
+  <button onclick="loadExample()">Пример из методички</button>
+  <button class="sec" onclick="rebuildMatrix()">Очистить</button>
+  <button onclick="solve()" style="background:var(--accent3);color:#0d0d0f;">▶ Решить</button>
+</div>
+
+<div class="layout">
+  <div>
+    <div class="card">
+      <div class="card-title">Матрица соединений R</div>
+      <p style="font-size:0.7rem;color:var(--muted);margin-bottom:10px;">0 — нет ребра, 1 — ребро. Нижний треугольник автоматически.</p>
+      <div id="matrixArea"></div>
+    </div>
+  </div>
+  <div>
+    <div class="card">
+      <div class="card-title">Пошаговое решение</div>
+      <div id="stepsOut" class="steps"><div class="empty-msg">Введи матрицу и нажми ▶ Решить</div></div>
+    </div>
+  </div>
+</div>
+<div id="resultOut"></div>
+
+<script>
+let N=6;
+function getNodeName(i){return 'x'+(i+1);}
+
+function rebuildMatrix(){
+  N=parseInt(document.getElementById('nodeCount').value);
+  renderMatrix();
+  document.getElementById('stepsOut').innerHTML='<div class="empty-msg">Введи матрицу и нажми ▶ Решить</div>';
+  document.getElementById('resultOut').innerHTML='';
+}
+
+function renderMatrix(vals){
+  const area=document.getElementById('matrixArea');
+  let html='<div class="col-labels">';
+  for(let j=0;j<N;j++) html+=`<div class="col-label">${getNodeName(j)}</div>`;
+  html+='</div><div class="matrix-input-area">';
+  for(let i=0;i<N;i++){
+    html+=`<div class="matrix-row"><span class="row-label">${getNodeName(i)}</span>`;
+    for(let j=0;j<N;j++){
+      if(i===j) html+=`<input type="text" class="diag" value="0" readonly>`;
+      else if(i>j) html+=`<input type="text" id="mir_${i}_${j}" class="diag" value="—" readonly>`;
+      else{
+        const v=vals?(vals[i*N+j]||''):'';
+        html+=`<input type="text" id="cell_${i}_${j}" class="${v==='1'?'has-edge':''}" value="${v}" maxlength="1"
+          oninput="onCellInput(${i},${j})" placeholder="">`;
+      }
+    }
+    html+='</div>';
+  }
+  html+='</div>';
+  area.innerHTML=html;
+}
+
+function onCellInput(i,j){
+  const el=document.getElementById(`cell_${i}_${j}`);
+  let v=el.value.trim();
+  if(v!=='0'&&v!=='1') v=v===''?'':'1';
+  el.value=v; el.className=v==='1'?'has-edge':'';
+  const mir=document.getElementById(`mir_${j}_${i}`);
+  if(mir) mir.value=v===''?'—':v;
+}
+
+function readMatrix(){
+  const R=Array.from({length:N},()=>Array(N).fill(0));
+  for(let i=0;i<N;i++) for(let j=i+1;j<N;j++){
+    const el=document.getElementById(`cell_${i}_${j}`);
+    const v=el?(parseInt(el.value)||0):0;
+    R[i][j]=v; R[j][i]=v;
+  }
+  return R;
+}
+
+function loadExample(){
+  document.getElementById('nodeCount').value='6'; N=6;
+  const edges=[[0,1],[0,2],[0,4],[0,5],[1,2],[1,3],[3,4],[3,5],[4,5]];
+  const vals=Array(N*N).fill('');
+  edges.forEach(([i,j])=>{vals[i*N+j]='1';vals[j*N+i]='1';});
+  renderMatrix(vals);
+  document.getElementById('stepsOut').innerHTML='<div class="empty-msg">Нажми ▶ Решить</div>';
+  document.getElementById('resultOut').innerHTML='';
+}
+
+// ---- Absorption with reason ----
+function absorb(termsList){
+  // returns [{term, absorbed: bool, reason: string}]
+  const unique=[];
+  termsList.forEach(t=>{
+    const key=t.join(',');
+    if(!unique.find(u=>u.join(',')===key)) unique.push(t);
+  });
+  return unique.map(t=>{
+    const subsumer=unique.find(u=>u!==t&&u.length<=t.length&&u.every(x=>t.includes(x)));
+    if(subsumer) return {term:t,absorbed:true,reason:`поглощается (${subsumer.map(n=>getNodeName(n)).join('')} ⊂ ${t.map(n=>getNodeName(n)).join('')})`};
+    // tautology: duplicates already removed above
+    return {term:t,absorbed:false,reason:''};
+  });
+}
+
+function absorbIdx(termsList){
+  const unique=[];
+  termsList.forEach(t=>{
+    const key=[...t].sort((a,b)=>a-b).join(',');
+    const ts=[...t].sort((a,b)=>a-b);
+    if(!unique.find(u=>[...u].sort((a,b)=>a-b).join(',')===key)) unique.push(ts);
+  });
+  return unique.map(t=>{
+    const subsumer=unique.find(u=>u!==t&&u.length<=t.length&&u.every(x=>t.includes(x)));
+    if(subsumer) return {term:t,absorbed:true,reason:`поглощается α${subsumer.map(j=>j+1).join('α')}`};
+    return {term:t,absorbed:false,reason:''};
+  });
+}
+
+function termStr(t){ return t.map(n=>getNodeName(n)).join(''); }
+function alphaStr(t){ return t.map(j=>`α<sub>${j+1}</sub>`).join('·'); }
+
+function solve(){
+  const R=readMatrix();
+  const steps=[];
+
+  // ---- METHOD MAGU ----
+  let activeNodes=Array.from({length:N},(_,i)=>i);
+  let Rcur=R.map(r=>[...r]);
+  let Ci_list=[];
+  let stepNum=1;
+
+  while(activeNodes.length>0){
+    const ri={};
+    activeNodes.forEach(i=>{ri[i]=activeNodes.filter(j=>j!==i&&Rcur[i][j]>0).length;});
+    const maxRi=Math.max(...Object.values(ri));
+    const xi=activeNodes.filter(i=>ri[i]===maxRi)[0];
+    const neighbors=activeNodes.filter(j=>j!==xi&&Rcur[xi][j]>0);
+    const expr=[xi,...neighbors];
+    Ci_list.push({node:xi,expr});
+
+    // Show current matrix state
+    const riStr=activeNodes.map(i=>`r<sub>${getNodeName(i)}</sub>=${ri[i]}`).join(', ');
+    const matStr=buildMiniMatrix(Rcur,activeNodes);
+    steps.push(`<div class="step">
+      <div class="step-header">Шаг ${stepNum++} — Метод Магу: удаляем ${getNodeName(xi)}</div>
+      <div>Текущая матрица R (вершины: ${activeNodes.map(i=>getNodeName(i)).join(', ')}):</div>
+      ${matStr}
+      <div>Число ненулевых элементов: ${riStr}</div>
+      <div>max r<sub>i</sub> = ${maxRi} → выбираем <span class="chosen">${getNodeName(xi)}</span></div>
+      <div>Γ${getNodeName(xi)} = {${neighbors.map(n=>getNodeName(n)).join(', ')||'∅'}}</div>
+      <div>Записываем: <span class="hi">C<sub>${getNodeName(xi)}</sub> = (${expr.map(n=>getNodeName(n)).join(' ')})</span></div>
+      <div style="color:var(--danger)">Удаляем строку и столбец ${getNodeName(xi)} из матрицы</div>
+    </div>`);
+
+    activeNodes=activeNodes.filter(n=>n!==xi);
+    for(let k=0;k<N;k++){Rcur[xi][k]=0;Rcur[k][xi]=0;}
+  }
+
+  // ---- EXPAND П = ∏Ci — one chain expression ----
+  // Collect all intermediate states and build one big chain: П = C1·C2·... = ... = ... = result
+  let currentTerms=[[]];
+  // Track each intermediate state after multiplying by each Ci
+  const chainStates=[]; // each: {afterCi: node index, raw: string (before minimise), minimised: string, absorbed: []}
+
+  Ci_list.forEach(({node,expr})=>{
+    const before=[...currentTerms];
+    const expanded=[];
+    before.forEach(term=>{
+      expr.forEach(nd=>{
+        const t=[...new Set([...term,nd])].sort((a,b)=>a-b);
+        expanded.push(t);
+      });
+    });
+    const rawStr=expanded.map(t=>termStr(t)).join(' ∨ ');
+    const withReasons=absorb(expanded);
+    const survivors=withReasons.filter(x=>!x.absorbed).map(x=>x.term);
+    const absorbedItems=withReasons.filter(x=>x.absorbed);
+    const minStr=survivors.map(t=>termStr(t)).join(' ∨ ');
+    currentTerms=survivors;
+    chainStates.push({node, expr, rawStr, minStr, absorbedItems, survivors});
+  });
+
+  // Build the chain string
+  const piHeader=`П = ${Ci_list.map(({node,expr})=>`C<sub>${getNodeName(node)}</sub>`).join(' · ')}`;
+  // Each state: show raw, then if minimisation happened show minimised
+  let chainLines=[piHeader];
+  chainStates.forEach(cs=>{
+    chainLines.push(cs.rawStr);
+    if(cs.absorbedItems.length>0){
+      // show what gets crossed out inline
+      const withCross=absorb([...cs.survivors,...cs.absorbedItems.map(x=>x.term)]);
+      const crossLine=withCross.map(x=>x.absorbed?`<span class="del">${termStr(x.term)}</span>`:termStr(x.term)).join(' ∨ ');
+      chainLines.push(crossLine);
+      chainLines.push(cs.minStr);
+    }
+  });
+
+  // Definitions of Ci for reference
+  const ciDefStr=Ci_list.map(({node,expr})=>`C<sub>${getNodeName(node)}</sub> = (${expr.map(n=>getNodeName(n)).join(' ')})`).join(', &nbsp;');
+
+  // Laws used
+  const lawsUsed=chainStates.some(cs=>cs.absorbedItems.length>0);
+
+  steps.push(`<div class="step">
+    <div class="step-header">Раскрытие П = ∏C<sub>i</sub></div>
+    <div style="margin-bottom:6px;color:var(--muted);font-size:0.7rem">${ciDefStr}</div>
+    <div style="line-height:2.1">${chainLines.join('<br>= ')}</div>
+    ${lawsUsed?`<div style="margin-top:6px;color:var(--muted);font-size:0.68rem">Применяем законы минимизации: aa = a (тавтология), a ∨ ab = a (поглощение)</div>`:''}
+  </div>`);
+
+  // Final П
+  const allNodes=Array.from({length:N},(_,i)=>i);
+  const Kj=currentTerms;
+  const piStr=Kj.map((t,i)=>`K<sub>${i+1}</sub>`).join(' ∨ ');
+  const kjDefs=Kj.map((t,i)=>`K<sub>${i+1}</sub> = (${termStr(t)})`).join('; ');
+  steps.push(`<div class="step">
+    <div class="step-header">П после минимизации</div>
+    <div><span class="hi">П = ${piStr}</span></div>
+    <div style="margin-top:4px">${kjDefs}</div>
+  </div>`);
+
+  // MWUM (alpha_j) = nodes NOT in Kj
+  const alphas=Kj.map(t=>allNodes.filter(n=>!t.includes(n)));
+  steps.push(`<div class="step">
+    <div class="step-header">Максимальные внутренне устойчивые множества (МВУМ)</div>
+    <div style="margin-bottom:4px">α<sub>j</sub> = вершины, НЕ вошедшие в K<sub>j</sub>:</div>
+    ${alphas.map((a,i)=>`<div>α<sub>${i+1}</sub> = {${a.map(n=>getNodeName(n)).join(', ')||'∅'}} &nbsp;<span class="mut">(K<sub>${i+1}</sub> = ${Kj[i].map(n=>getNodeName(n)).join('')})</span></div>`).join('')}
+  </div>`);
+
+  // ---- PETRIK: build t_i ----
+  const ti={};
+  allNodes.forEach(xi=>{ti[xi]=alphas.map((_,j)=>j).filter(j=>alphas[j].includes(xi));});
+
+  const tiLines=allNodes.map(xi=>{
+    const inAlphas=ti[xi].map(j=>`α<sub>${j+1}</sub>`).join(' ∨ ');
+    const alphaList=ti[xi].map(j=>`α<sub>${j+1}</sub>={${alphas[j].map(n=>getNodeName(n)).join(',')}}`).join(', ');
+    return `<div>t<sub>${getNodeName(xi)}</sub> = ${inAlphas||'—'} &nbsp;<span class="mut">(${getNodeName(xi)} входит в: ${alphaList||'ни одно МВУМ'})</span></div>`;
+  });
+  const piPrimeStr=allNodes.map(xi=>`t<sub>${getNodeName(xi)}</sub>`).join(' · ');
+  steps.push(`<div class="step">
+    <div class="step-header">Метод Петрика — строим t<sub>i</sub></div>
+    <div style="margin-bottom:4px">t<sub>i</sub> — МВУМ, содержащие вершину x<sub>i</sub>:</div>
+    ${tiLines.join('')}
+    <div style="margin-top:6px">Составляем конъюнкцию:<br>
+    <span class="hi">П' = ${piPrimeStr}</span></div>
+  </div>`);
+
+  // ---- Expand П' — one chain expression ----
+  let pTerms=[[]];
+  const pChainStates=[];
+  allNodes.forEach(xi=>{
+    if(ti[xi].length===0) return;
+    const before=[...pTerms];
+    const expanded=[];
+    before.forEach(term=>{
+      ti[xi].forEach(aIdx=>{
+        const t=[...new Set([...term,aIdx])].sort((a,b)=>a-b);
+        expanded.push(t);
+      });
+    });
+    const rawStr=expanded.map(t=>`(${alphaStr(t)})`).join(' ∨ ');
+    const withReasons=absorbIdx(expanded);
+    const survivors=withReasons.filter(x=>!x.absorbed).map(x=>x.term);
+    const absorbedItems=withReasons.filter(x=>x.absorbed);
+    const minStr=survivors.map(t=>`(${alphaStr(t)})`).join(' ∨ ');
+    pTerms=survivors;
+    pChainStates.push({xi, rawStr, minStr, absorbedItems, survivors});
+  });
+
+  // Build П' chain
+  const piPrimeHeader=`П' = ${allNodes.filter(xi=>ti[xi].length>0).map(xi=>`t<sub>${getNodeName(xi)}</sub>`).join(' · ')}`;
+  let pChainLines=[piPrimeHeader];
+  pChainStates.forEach(cs=>{
+    pChainLines.push(cs.rawStr);
+    if(cs.absorbedItems.length>0){
+      const allForCross=[...cs.survivors,...cs.absorbedItems.map(x=>x.term)];
+      const withCross=absorbIdx(allForCross);
+      const crossLine=withCross.map(x=>x.absorbed?`<span class="del">(${alphaStr(x.term)})</span>`:`(${alphaStr(x.term)})`).join(' ∨ ');
+      pChainLines.push(crossLine);
+      pChainLines.push(cs.minStr);
+    }
+  });
+
+  const pLawsUsed=pChainStates.some(cs=>cs.absorbedItems.length>0);
+  steps.push(`<div class="step">
+    <div class="step-header">Раскрытие П' = ∏t<sub>i</sub></div>
+    <div style="line-height:2.1">${pChainLines.join('<br>= ')}</div>
+    ${pLawsUsed?`<div style="margin-top:6px;color:var(--muted);font-size:0.68rem">Применяем aa = a и a ∨ ab = a</div>`:''}
+  </div>`);
+
+  // Final П'
+  const minLen=Math.min(...pTerms.map(t=>t.length));
+  const bestTerms=pTerms.filter(t=>t.length===minLen);
+  const finalPiStr=pTerms.map(t=>`(${alphaStr(t)})`).join(' ∨ ');
+  steps.push(`<div class="step">
+    <div class="step-header">П' после полной минимизации</div>
+    <div><span class="hi">П' = ${finalPiStr}</span></div>
+    <div style="margin-top:6px">Выбираем конъюнктивный терм с минимальным числом сомножителей:</div>
+    ${bestTerms.map((t,vi)=>`<div>Вариант ${vi+1}: <span class="hi">(${alphaStr(t)})</span> — ${t.length} сомножителя</div>`).join('')}
+    <div style="margin-top:6px">Хроматическое число <span class="hi">χ(G) = ${minLen}</span></div>
+    <div>Вариантов оптимальной раскраски: ${bestTerms.length}</div>
+    ${bestTerms.map((term,vi)=>`<div>Вариант ${vi+1}: ${term.map(j=>`α<sub>${j+1}</sub>={${alphas[j].map(n=>getNodeName(n)).join(',')}}`).join(', ')}</div>`).join('')}
+  </div>`);
+
+  document.getElementById('stepsOut').innerHTML=steps.join('');
+
+  const COLORS=['#7c6af7','#f7a06a','#6af7b8','#f76a6a','#f7e06a','#6ab8f7','#f76ab8','#b8f76a'];
+  document.getElementById('resultOut').innerHTML=`
+    <div class="result-box" style="max-width:1150px;margin-top:16px;">
+      <h3>🎨 Варианты раскраски · χ(G) = ${minLen}</h3>
+      ${bestTerms.map((term,vi)=>`
+        <div style="margin-bottom:12px;">
+          <div style="font-size:0.7rem;color:var(--muted);margin-bottom:6px;">Вариант ${vi+1}</div>
+          <div class="color-group">
+            ${term.map((j,ci)=>`<span class="color-chip" style="background:${COLORS[ci%COLORS.length]}">Цвет ${ci+1}: {${alphas[j].map(n=>getNodeName(n)).join(', ')||'∅'}}</span>`).join('')}
+          </div>
+        </div>`).join('<hr style="border-color:var(--border);margin:10px 0">')}
+    </div>`;
+}
+
+function buildMiniMatrix(Rcur, activeNodes){
+  if(activeNodes.length===0) return '';
+  let html='<table style="border-collapse:collapse;font-size:0.68rem;margin:6px 0"><tr><td style="padding:2px 5px;color:var(--muted)"></td>';
+  activeNodes.forEach(j=>{ html+=`<td style="padding:2px 5px;color:var(--accent);font-weight:700;text-align:center">${getNodeName(j)}</td>`; });
+  html+='</tr>';
+  activeNodes.forEach(i=>{
+    html+=`<tr><td style="padding:2px 5px;color:var(--accent);font-weight:700">${getNodeName(i)}</td>`;
+    activeNodes.forEach(j=>{
+      const v=Rcur[i][j];
+      html+=`<td style="padding:2px 5px;text-align:center;border:1px solid var(--border);background:var(--surface2);${v>0?'color:var(--accent3);font-weight:700':''}">${v}</td>`;
+    });
+    html+='</tr>';
+  });
+  html+='</table>';
+  return html;
+}
+
+rebuildMatrix();
+</script>
+</body>
+</html>
