@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<title>Лабораторная работа №1 — Попадание точки в область</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="page-header">
+    <p>Васидов Мухаммадсаид</p>
+    <p>Группа: P3232</p>
+    <p>Вариант: 22710</p>
+  </div>
+
+  <div class="columns">
+    <div class="column">
+      <div class="block">
+        <h2>Координатная плоскость</h2>
+        <canvas id="plane" width="480" height="480"></canvas>
+      </div>
+    </div>
+
+    <div class="column">
+      <div class="block form-card">
+        <h2>Проверка точки</h2>
+        <form id="checkForm">
+          <label for="xInput">X</label>
+          <select id="xInput" name="x">
+            <option value="-4">-4</option>
+            <option value="-3">-3</option>
+            <option value="-2">-2</option>
+            <option value="-1">-1</option>
+            <option value="0" selected>0</option>
+            <option value="1">1</option>
+            <option value="2">2</option>
+            <option value="3">3</option>
+            <option value="4">4</option>
+          </select>
+
+          <label for="yInput">Y (от -3 до 3)</label>
+          <input type="text" id="yInput" name="y" value="0">
+
+          <label>R</label>
+          <div class="r-group">
+            <label><input type="checkbox" name="r" value="1"> 1</label>
+            <label><input type="checkbox" name="r" value="1.5"> 1.5</label>
+            <label><input type="checkbox" name="r" value="2"> 2</label>
+            <label><input type="checkbox" name="r" value="2.5"> 2.5</label>
+            <label><input type="checkbox" name="r" value="3"> 3</label>
+          </div>
+
+          <button type="submit">Проверить</button>
+          <div id="formError" class="error"></div>
+        </form>
+      </div>
+
+      <div class="block results-block">
+        <h2>Результаты проверок</h2>
+        <table>
+          <thead>
+            <tr><th>X</th><th>Y</th><th>R</th><th>Попадание</th><th>Дата и время</th></tr>
+          </thead>
+          <tbody id="resultsBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+<script src="script.js"></script>
+</body>
+</html>
