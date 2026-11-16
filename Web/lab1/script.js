@@ -10,8 +10,13 @@ var resultsBody = document.getElementById('resultsBody');
 var size = 480;
 var scale = size / 9;
 
-function px(x) { return size / 2 + x * scale; }
-function py(y) { return size / 2 - y * scale; }
+function px(x) { 
+  return size / 2 + x * scale; 
+}
+
+function py(y) { 
+  return size / 2 - y * scale; 
+}
 
 function draw(r, x, y, hit) {
   ctx.clearRect(0, 0, size, size);
@@ -39,7 +44,7 @@ function draw(r, x, y, hit) {
     ctx.fillText(i, px(0) - 12, py(i) + 4);
   }
 
-  // область (вариант 22710)
+  // область
   ctx.beginPath();
   ctx.moveTo(px(r), py(0));
   for (i = 0; i <= 40; i++) {
